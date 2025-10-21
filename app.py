@@ -11,7 +11,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 st.set_page_config(page_title="Healthcare Chatbot", page_icon="🩺", layout="centered")
 
 st.title("🩺 AI Healthcare Chatbot")
-st.caption("💬 I'm here to provide **general health information** — not a replacement for a doctor.")
 
 # System prompt
 SYSTEM_PROMPT = (
@@ -53,4 +52,3 @@ if prompt := st.chat_input("Describe your symptoms or ask a health-related quest
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
 st.divider()
-st.markdown("⚠️ **Disclaimer:** This chatbot provides general information and is not a substitute for professional medical advice. Always consult a qualified healthcare provider.")
