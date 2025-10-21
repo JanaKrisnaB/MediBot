@@ -1,54 +1,29 @@
 import streamlit as st
-from openai import OpenAI
+import google.generativeai as genai
 import os
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Load API key
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Streamlit page setup
-st.set_page_config(page_title="Healthcare Chatbot", page_icon="🩺", layout="centered")
+st.title("🩺 MediBot - Your Healthcare Assistant")
 
-st.title("🩺 AI Healthcare Chatbot")
+user_input = st.text_input("Describe your symptoms or ask a question:")
 
-# System prompt
-SYSTEM_PROMPT = (
-    "You are a kind and professional healthcare assistant. "
-    "Provide general medical information, healthy lifestyle advice, "
-    "and explanations for symptoms. "
-    "Do NOT give strict diagnoses or prescribe medications. "
-    "Always remind users to consult a doctor for confirmation."
-)
-
-# Maintain chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Hi! How can I assist you today? 😊"}]
-
-# Display chat messages
-for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        st.chat_message("user").markdown(msg["content"])
+if st.button("Ask"):
+    if user_input.strip() == "":
+        st.warning("Please enter a question.")
     else:
-        st.chat_message("assistant").markdown(msg["content"])
-
-# User input
-if prompt := st.chat_input("Describe your symptoms or ask a health-related question..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").markdown(prompt)
-
-    with st.chat_message("assistant"):
-        with st.spinner("Analyzing your input..."):
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "system", "content": SYSTEM_PROMPT}] + st.session_state.messages
-                )
-                reply = response.choices[0].message.content
-            except Exception as e:
-                reply = f"⚠️ Error: {str(e)}"
-
-            st.markdown(reply)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-
-st.divider()
+        with st.spinner("Analyzing..."):
+            response = genai.chat.create(
+                model="gemini-1.5",
+                messages=[
+                    {"author": "system", "content": (
+                        "You are a kind and professional healthcare assistant. "
+                        "You provide general medical guidance and explanations for symptoms, "
+                        "but never give strict diagnoses. Always remind users to consult a doctor."
+                    )},
+                    {"author": "user", "content": user_input}
+                ]
+            )
+            st.success("Here’s what I think:")
+            st.write(response.last)
