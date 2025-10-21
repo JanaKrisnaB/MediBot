@@ -40,12 +40,13 @@ if prompt := st.chat_input("Describe your symptoms or ask a health-related quest
 
             # Get Gemini response
             response = genai.chat.create(
-                model="gemini-2.5-flash",
-                messages=messages
+            model="gemini-2.5-flash",
+            messages=messages
             )
-            reply = response.last
+            reply = response.candidates[0].content
             st.chat_message("assistant").markdown(reply)
             st.session_state.history.append({"role": "assistant", "content": reply})
+
 
 st.divider()
 st.markdown("⚠️ **Disclaimer:** This chatbot provides general information and is not a substitute for professional medical advice. Always consult a qualified healthcare provider.")
