@@ -8,45 +8,35 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 # Load the Gemini model
 model = genai.GenerativeModel("gemini-2.5-flash")
 
-SYSTEM_PROMPT = """
-You are MediBot — a helpful, empathetic, and knowledgeable healthcare assistant.
-Your job is to:
-- Help users understand their symptoms, diseases, medications, and health conditions in simple terms.
-- Provide safe, factual, and evidence-based medical guidance.
-- Encourage users to seek professional care when needed.
-- NEVER provide direct medical diagnosis, prescriptions, or emergency instructions.
-- Maintain a kind, supportive, and respectful tone like a real healthcare professional.
-"""
-
-# Initialize session
+# Start a chat session (maintains history)
 if "chat" not in st.session_state:
-    st.session_state.chat = model.start_chat(history=[
-        {"role": "system", "parts": [{"text": SYSTEM_PROMPT}]}
-    ])
+    st.session_state.chat = model.start_chat(history=[])
 
-# Streamlit UI
-st.set_page_config(page_title="🩺 MediBot", layout="centered")
-st.title("🤖 MediBot - Your Healthcare Assistant")
-st.markdown("I’m here to help you understand your health better. How can I assist you today?")
+# Streamlit App UI
+st.set_page_config(page_title="MediBot", layout="centered")
 
-for message in st.session_state.chat.history[1:]:
-    role = "🧑 You" if message["role"] == "user" else "🤖 MediBot"
+st.title("🤖 MediBot - Your HealthCare Assistant")
+st.markdown("Ask me anything")
+
+# Chat history display
+for message in st.session_state.chat.history:
+    role = "🧑 You" if message["role"] == "user" else "🤖 Gemini"
     with st.chat_message(role):
         st.markdown(message["parts"][0]["text"])
 
 # User input
-user_input = st.chat_input("Describe your symptoms or ask a health question...")
-
+user_input = st.chat_input("Type your message here...")
+prompt = f"Hey, you are a healthcare assistant. Respond accordingly and professionally.\nUser: {user_input}"
 if user_input:
-    # Show user message
+    # Display user message
     with st.chat_message("🧑 You"):
         st.markdown(user_input)
 
-    # Generate MediBot response (streamed)
-    with st.chat_message("🤖 MediBot"):
+    # Get Gemini response (streaming)
+    with st.chat_message("🤖 Gemini"):
         message_placeholder = st.empty()
         full_response = ""
-        response = st.session_state.chat.send_message(user_input, stream=True)
+        response = st.session_state.chat.send_message(prompt, stream=True)
 
         for chunk in response:
             if chunk.text:
@@ -54,6 +44,6 @@ if user_input:
                 message_placeholder.markdown(full_response + "▌")
         message_placeholder.markdown(full_response)
 
-    # Update chat history
+    # Save to session history
     st.session_state.chat.history.append({"role": "user", "parts": [{"text": user_input}]})
     st.session_state.chat.history.append({"role": "model", "parts": [{"text": full_response}]})
