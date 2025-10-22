@@ -1,46 +1,49 @@
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 import os
 
-# Initialize Gemini client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Configure Gemini API key
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-st.title("🩺 Healthcare Chatbot")
+# Load the Gemini model
+model = genai.GenerativeModel("gemini-2.5-flash")
 
-SYSTEM_PROMPT = (
-    "You are a kind and professional healthcare assistant. "
-    "Provide general guidance, explanations of symptoms, and healthy lifestyle tips. "
-    "Do NOT give strict diagnoses. Always remind users to consult a doctor."
-)
+# Start a chat session (maintains history)
+if "chat" not in st.session_state:
+    st.session_state.chat = model.start_chat(history=[])
 
-# Initialize session history
-if "history" not in st.session_state:
-    st.session_state.history = []
+# Streamlit App UI
+st.set_page_config(page_title="💬 Gemini Chatbot", layout="centered")
 
-# Display chat history
-for chat in st.session_state.history:
-    role = "user" if chat["role"] == "user" else "assistant"
-    st.chat_message(role).markdown(chat["content"])
+st.title("🤖 Gemini Chatbot")
+st.markdown("Ask me anything — powered by Google's Gemini 2.5 Flash!")
+
+# Chat history display
+for message in st.session_state.chat.history:
+    role = "🧑 You" if message["role"] == "user" else "🤖 Gemini"
+    with st.chat_message(role):
+        st.markdown(message["parts"][0]["text"])
 
 # User input
-if prompt := st.chat_input("Describe your symptoms or ask a question..."):
-    st.session_state.history.append({"role": "user", "content": prompt})
-    st.chat_message("user").markdown(prompt)
+user_input = st.chat_input("Type your message here...")
 
-    # Combine all history for context
-    messages = SYSTEM_PROMPT + "\n"
-    for msg in st.session_state.history:
-        author = "User" if msg["role"] == "user" else "Assistant"
-        messages += f"{author}: {msg['content']}\n"
+if user_input:
+    # Display user message
+    with st.chat_message("🧑 You"):
+        st.markdown(user_input)
 
-    # Get response from Gemini 2.5 Flash
-    response = client.models.generate_text(
-        model="gemini-2.5-flash",
-        prompt=messages,
-        max_output_tokens=500
-    )
-    reply = response.output_text
-    st.chat_message("assistant").markdown(reply)
-    st.session_state.history.append({"role": "assistant", "content": reply})
+    # Get Gemini response (streaming)
+    with st.chat_message("🤖 Gemini"):
+        message_placeholder = st.empty()
+        full_response = ""
+        response = st.session_state.chat.send_message(user_input, stream=True)
 
-st.divider()
+        for chunk in response:
+            if chunk.text:
+                full_response += chunk.text
+                message_placeholder.markdown(full_response + "▌")
+        message_placeholder.markdown(full_response)
+
+    # Save to session history
+    st.session_state.chat.history.append({"role": "user", "parts": [{"text": user_input}]})
+    st.session_state.chat.history.append({"role": "model", "parts": [{"text": full_response}]})
